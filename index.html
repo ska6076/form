@@ -256,17 +256,7 @@
     <div class="wrap">
         <header>
             <a href="/" class="logo">Form<span>Flow</span></a>
-            <div class="hdr-r">
-                <div class="badge api" id="badge">
-                    <div class="dot"></div>
-                    <span id="btxt">Server Connected</span>
-                </div>
-                <nav class="nav-l">
-                    <a href="dashboard.html" class="nav-d">
-                        <i class="fas fa-chart-bar" style="margin-right:4px"></i> Dashboard
-                    </a>
-                </nav>
-            </div>
+            
         </header>
 
         <main>
@@ -344,47 +334,47 @@
         </main>
     </div>
 
-    <script>
-        var form = document.getElementById('form');
-        var sbtn = document.getElementById('sbtn');
-        var sov = document.getElementById('sov');
-        var ccEl = document.getElementById('cc');
-        var msgEl = document.getElementById('message');
+     <script>
+         var form = document.getElementById('form');
+         var sbtn = document.getElementById('sbtn');
+         var sov = document.getElementById('sov');
+         var ccEl = document.getElementById('cc');
+         var msgEl = document.getElementById('message');
 
-        msgEl.addEventListener('input', function() {
-            var l = msgEl.value.length;
-            ccEl.textContent = l + ' / 2000';
-            ccEl.style.color = l > 1800 ? 'var(--err)' : 'var(--fgm)';
-        });
+         msgEl.addEventListener('input', function() {
+             var l = msgEl.value.length;
+             ccEl.textContent = l + ' / 2000';
+             ccEl.style.color = l > 1800 ? 'var(--err)' : 'var(--fgm)';
+         });
 
-        ['name', 'email', 'subject', 'message'].forEach(function(f) {
-            var el = document.getElementById(f);
-            var g = document.getElementById('g_' + f);
-            el.addEventListener('input', function() { g.classList.remove('er'); });
-            el.addEventListener('change', function() { g.classList.remove('er'); });
-        });
+         ['name', 'email', 'subject', 'message'].forEach(function(f) {
+             var el = document.getElementById(f);
+             var g = document.getElementById('g_' + f);
+             el.addEventListener('input', function() { g.classList.remove('er'); });
+             el.addEventListener('change', function() { g.classList.remove('er'); });
+         });
 
-        function setE(id, m) {
-            var g = document.getElementById('g_' + id);
-            g.classList.add('er');
-            g.querySelector('.et span').textContent = m;
-        }
+         function setE(id, m) {
+             var g = document.getElementById('g_' + id);
+             g.classList.add('er');
+             g.querySelector('.et span').textContent = m;
+         }
 
-        function validate() {
-            var ok = true;
-            var n = document.getElementById('name').value.trim();
-            var e = document.getElementById('email').value.trim();
-            var s = document.getElementById('subject').value;
-            var m = document.getElementById('message').value.trim();
-            if (!n) { setE('name', 'Please enter your name'); ok = false; }
-            else if (n.length < 2) { setE('name', 'At least 2 characters'); ok = false; }
-            if (!e) { setE('email', 'Please enter your email'); ok = false; }
-            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setE('email', 'Invalid email format'); ok = false; }
-            if (!s) { setE('subject', 'Please select a topic'); ok = false; }
-            if (!m) { setE('message', 'Please enter a message'); ok = false; }
-            else if (m.length < 10) { setE('message', 'At least 10 characters'); ok = false; }
-            return ok;
-        }
+         function validate() {
+             var ok = true;
+             var n = document.getElementById('name').value.trim();
+             var e = document.getElementById('email').value.trim();
+             var s = document.getElementById('subject').value;
+             var m = document.getElementById('message').value.trim();
+             if (!n) { setE('name', 'Please enter your name'); ok = false; }
+             else if (n.length < 2) { setE('name', 'At least 2 characters'); ok = false; }
+             if (!e) { setE('email', 'Please enter your email'); ok = false; }
+             else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setE('email', 'Invalid email format'); ok = false; }
+             if (!s) { setE('subject', 'Please select a topic'); ok = false; }
+             if (!m) { setE('message', 'Please enter a message'); ok = false; }
+             else if (m.length < 10) { setE('message', 'At least 10 characters'); ok = false; }
+             return ok;
+         }
 
         form.addEventListener('submit', async function(ev) {
             ev.preventDefault();
@@ -396,48 +386,85 @@
                 name: document.getElementById('name').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 subject: document.getElementById('subject').value,
-                message: document.getElementById('message').value.trim()
+                message: document.getElementById('message').value.trim(),
+                timestamp: new Date().toISOString(),
+                read: false,
+                id: Math.random().toString(36).substr(2, 9)
             };
 
             var ctrl = new AbortController();
             var timer = setTimeout(function() { ctrl.abort(); }, 10000);
-            var r = await fetch('/api/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: ctrl.signal
-            });
-            clearTimeout(timer);
+            try {
+                var r = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: ctrl.signal
+                });
+                clearTimeout(timer);
 
-            if (r.ok) {
-                sov.classList.add('show');
-                toast('Message sent successfully!', 'ok');
-            } else {
-                throw new Error('Server error');
+                if (r.ok) {
+                    // Save to localStorage as fallback
+                    var SK = 'formflow_messages';
+                    var msgs = [];
+                    try { msgs = JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { msgs = []; }
+                    msgs.unshift(payload);
+                    localStorage.setItem(SK, JSON.stringify(msgs));
+                    
+                    sov.classList.add('show');
+                    toast('Thanks for contacting us! We\'ll get back to you soon.', 'ok');
+                    // Stay on the contact form page after submission (don't redirect to dashboard)
+                    // setTimeout(function() {
+                    //     window.location.href = 'dashboard.html';
+                    // }, 1500);
+                } else {
+                    // Fallback to localStorage only if API fails
+                    var SK = 'formflow_messages';
+                    var msgs = [];
+                    try { msgs = JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { msgs = []; }
+                    msgs.unshift(payload);
+                    localStorage.setItem(SK, JSON.stringify(msgs));
+                    
+                    toast('Failed to send via server, saved locally', 'er');
+                    // Stay on the contact form page after submission (don't redirect to dashboard)
+                    // window.location.href = 'dashboard.html';
+                }
+            } catch (err) {
+                clearTimeout(timer);
+                // Network error or abort
+                var SK = 'formflow_messages';
+                var msgs = [];
+                try { msgs = JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { msgs = []; }
+                msgs.unshift(payload);
+                localStorage.setItem(SK, JSON.stringify(msgs));
+                
+                    toast('Network error. Saved locally.', 'er');
+                    // Stay on the contact form page after submission (don't redirect to dashboard)
+                    // window.location.href = 'dashboard.html';
+            } finally {
+                sbtn.classList.remove('ld');
+                sbtn.disabled = false;
             }
-
-            sbtn.classList.remove('ld');
-            sbtn.disabled = false;
         });
 
-        function resetForm() {
-            form.reset();
-            ccEl.textContent = '0 / 2000';
-            sov.classList.remove('show');
-            document.querySelectorAll('.fg').forEach(function(g) { g.classList.remove('er'); });
-        }
+         function resetForm() {
+             form.reset();
+             ccEl.textContent = '0 / 2000';
+             sov.classList.remove('show');
+             document.querySelectorAll('.fg').forEach(function(g) { g.classList.remove('er'); });
+         }
 
-        function toast(msg, type) {
-            var t = document.createElement('div');
-            t.className = 't ' + type;
-            var ic = { ok: 'fa-check-circle', er: 'fa-times-circle', inf: 'fa-info-circle' };
-            t.innerHTML = '<i class="fas ' + (ic[type] || ic.inf) + '"></i> ' + msg;
-            document.getElementById('tc').appendChild(t);
-            setTimeout(function() {
-                t.classList.add('out');
-                setTimeout(function() { t.remove(); }, 250);
-            }, 3500);
-        }
-    </script>
+         function toast(msg, type) {
+             var t = document.createElement('div');
+             t.className = 't ' + type;
+             var ic = { ok: 'fa-check-circle', er: 'fa-times-circle', inf: 'fa-info-circle' };
+             t.innerHTML = '<i class="fas ' + (ic[type] || ic.inf) + '"></i> ' + msg;
+             document.getElementById('tc').appendChild(t);
+             setTimeout(function() {
+                 t.classList.add('out');
+                 setTimeout(function() { t.remove(); }, 250);
+             }, 3500);
+         }
+     </script>
 </body>
 </html>
