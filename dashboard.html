@@ -342,9 +342,7 @@
                 <a class="ni" onclick="clearAll()"><i class="fas fa-trash"></i> Clear All Messages</a>
                 <a href="index.html" class="ni"><i class="fas fa-external-link-alt"></i> Go to Form</a>
             </nav>
-            <div class="sb-ft">
-                <a href="index.html"><i class="fas fa-arrow-left"></i> Back to Form</a>
-            </div>
+            
         </aside>
 
         <div class="mc">
@@ -360,7 +358,7 @@
                 </div>
                 <div class="tb-r">
                     <button class="tbtn" onclick="refresh()"><i class="fas fa-sync-alt" id="ri"></i> Refresh</button>
-                    <a href="index.html" class="tbtn pri"><i class="fas fa-plus"></i> New Message</a>
+                    
                 </div>
             </header>
 
@@ -413,13 +411,12 @@
         var sTimer = null;
         var useAPI = false;
 
-        async function checkServer() {
+        function checkServer() {
             try {
-                var ctrl = new AbortController();
-                var timer = setTimeout(function() { ctrl.abort(); }, 3000);
-                var r = await fetch('/api/health', { signal: ctrl.signal });
-                clearTimeout(timer);
-                if (r.ok) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/health', false);
+                xhr.send();
+                if (xhr.status === 200) {
                     useAPI = true;
                     return true;
                 }
@@ -428,28 +425,29 @@
             return false;
         }
 
-        async function init() {
-            await checkServer();
-            await render();
-            document.getElementById('lu').textContent = 'Ready' + (useAPI ? ' (Server)' : ' (Local)');
+        function init() {
+            checkServer();
+            render();
+            document.getElementById('lu').textContent = 'Ready';
             
-            setInterval(async function() {
-                await checkServer();
-                await render();
+            setInterval(function() {
+                checkServer();
+                render();
                 document.getElementById('lu').textContent = 'Auto-sync: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             }, 3000);
         }
 
         init();
 
-        async function getMsgs() {
+        function getMsgs() {
+            var result = [];
+            var syncFetch = false;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/messages', false);
             try {
-                var ctrl = new AbortController();
-                var timer = setTimeout(function() { ctrl.abort(); }, 5000);
-                var r = await fetch('/api/messages', { signal: ctrl.signal });
-                clearTimeout(timer);
-                if (r.ok) {
-                    var data = await r.json();
+                xhr.send();
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
                     useAPI = true;
                     return data.data || [];
                 }
@@ -457,59 +455,64 @@
             try { return JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { return []; }
         }
         
-        async function saveMsgs(m) {
-            localStorage.setItem(SK, JSON.stringify(m));
-        }
+        function saveMsgs(m) { localStorage.setItem(SK, JSON.stringify(m)); }
 
-        async function togRead(id, silent) {
-            var msgs = await getMsgs();
+        function togRead(id, silent) {
+            var msgs = getMsgs();
             var m = msgs.find(function(x) { return x.id === id; });
             if (!m) return;
             var newReadState = !m.read;
-            try {
-                await fetch('/api/messages/' + id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ read: newReadState })
-                });
-            } catch(e) {}
-            m.read = newReadState;
-            render();
-            if (!silent) toast2(m.read ? 'Marked as read' : 'Marked as unread', 'inf');
-            if (curId === id) {
-                document.getElementById('mR').innerHTML = m.read
-                    ? '<i class="fas fa-envelope"></i> Mark as Unread'
-                    : '<i class="fas fa-envelope-open"></i> Mark as Read';
-            }
+            var xhr = new XMLHttpRequest();
+            xhr.open('PATCH', '/api/messages/' + id, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({ read: newReadState }));
+            xhr.onload = function() {
+                m.read = newReadState;
+                render();
+                if (!silent) toast2(m.read ? 'Marked as read' : 'Marked as unread', 'inf');
+                if (curId === id) {
+                    document.getElementById('mR').innerHTML = m.read
+                        ? '<i class="fas fa-envelope"></i> Mark as Unread'
+                        : '<i class="fas fa-envelope-open"></i> Mark as Read';
+                }
+            };
         }
 
-        async function delMsg(id) {
-            try {
-                await fetch('/api/messages/' + id, { method: 'DELETE' });
-            } catch(e) {}
-            var msgs = await getMsgs();
-            msgs = msgs.filter(function(x) { return x.id !== id; });
-            render();
-            toast2('Message deleted', 'ok');
-            if (curId === id) closeMo();
+        function delMsg(id) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('DELETE', '/api/messages/' + id, true);
+            xhr.send();
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    render();
+                    toast2('Message deleted', 'ok');
+                    if (curId === id) closeMo();
+                } else {
+                    toast2('Error deleting message', 'er');
+                }
+            };
         }
 
-        async function markAll() {
-            try {
-                await fetch('/api/messages/read-all', { method: 'PATCH' });
-            } catch(e) {}
-            render();
-            toast2('All marked as read', 'ok');
+        function markAll() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('PATCH', '/api/messages/read-all', true);
+            xhr.send();
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    render();
+                    toast2('All marked as read', 'ok');
+                }
+            };
         }
 
-        async function clearAll() {
-            var msgs = await getMsgs();
+        function clearAll() {
+            var msgs = getMsgs();
             if (msgs.length === 0) { toast2('No messages to clear', 'inf'); return; }
-            for (var i = 0; i < msgs.length; i++) {
-                try {
-                    await fetch('/api/messages/' + msgs[i].id, { method: 'DELETE' });
-                } catch(e) {}
-            }
+            msgs.forEach(function(m) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('DELETE', '/api/messages/' + m.id, true);
+                xhr.send();
+            });
             render();
             toast2('All messages cleared', 'ok');
         }
@@ -531,8 +534,8 @@
             });
         }
 
-        async function updateStats() {
-            var msgs = await getMsgs();
+        function updateStats() {
+            var msgs = getMsgs();
             var today = new Date(); today.setHours(0, 0, 0, 0);
             var tod = msgs.filter(function(m) { return new Date(m.timestamp) >= today; }).length;
             var unr = msgs.filter(function(m) { return !m.read; }).length;
@@ -546,8 +549,8 @@
             bdg.style.display = unr > 0 ? 'inline' : 'none';
         }
 
-        async function render() {
-            var msgs = await getMsgs();
+        function render() {
+            var msgs = getMsgs();
             var search = document.getElementById('si').value.toLowerCase();
             var subj = document.getElementById('sf').value;
             var unrOnly = document.getElementById('ut').classList.contains('on');
@@ -582,17 +585,17 @@
                     '<div><span class="ms" data-s="' + esc(m.subject) + '">' + esc(m.subject) + '</span></div>' +
                     '<div class="mt2">' + relTime(m.timestamp) + '</div>' +
                     '<div class="ma">' +
-                        '<button class="ab" onclick="event.stopPropagation();togRead(\'' + m.id + '\')" title="' + (m.read ? 'Mark unread' : 'Mark read') + '"><i class="fas ' + (m.read ? 'fa-envelope' : 'fa-envelope-open') + '"></i></button>' +
-                        '<button class="ab del" onclick="event.stopPropagation();delMsg(\'' + m.id + '\')" title="Delete"><i class="fas fa-trash-alt"></i></button>' +
+                        '<button class="ab" onclick="togRead(\'' + m.id + '\')" title="' + (m.read ? 'Mark unread' : 'Mark read') + '"><i class="fas ' + (m.read ? 'fa-envelope' : 'fa-envelope-open') + '"></i></button>' +
+                        '<button class="ab del" onclick="delMsg(\'' + m.id + '\')" title="Delete"><i class="fas fa-trash-alt"></i></button>' +
                     '</div></div>';
             }).join('');
 
             updateStats();
         }
 
-        async function openMo(id) {
+        function openMo(id) {
             curId = id;
-            var msgs = await getMsgs();
+            var msgs = getMsgs();
             var m = msgs.find(function(x) { return x.id === id; });
             if (!m) return;
             document.getElementById('mN').textContent = m.name;
@@ -622,17 +625,17 @@
         function togReadMo() { if (curId) togRead(curId); }
         function delMo() { if (curId) delMsg(curId); }
 
-        async function filtUnr() {
+        function filtUnr() {
             document.getElementById('ut').classList.add('on');
-            await render();
+            render();
             document.getElementById('sb').classList.remove('open');
         }
 
-        async function clearFilt() {
+        function clearFilt() {
             document.getElementById('ut').classList.remove('on');
             document.getElementById('sf').value = 'all';
             document.getElementById('si').value = '';
-            await render();
+            render();
             document.getElementById('sb').classList.remove('open');
         }
 
@@ -641,10 +644,10 @@
             sTimer = setTimeout(render, 250);
         }
 
-        async function refresh() {
+        function refresh() {
             var ic = document.getElementById('ri');
             ic.classList.add('rsp');
-            await render();
+            render();
             setTimeout(function() { ic.classList.remove('rsp'); }, 600);
             document.getElementById('lu').textContent = 'Updated: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             toast2('Refreshed', 'inf');
