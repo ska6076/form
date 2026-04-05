@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FormFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #121010;
+            --bg2: #1C1917;
+            --bg3: #231F1C;
+            --fg: #F5EDE4;
+            --fgm: #9C8E80;
+            --fgd: #6B5E52;
+            --accent: #C4652A;
+            --accentH: #A8531F;
+            --accentG: rgba(196,101,42,0.15);
+            --ok: #3DAA6D;
+            --err: #D64545;
+            --warn: #D4A03A;
+            --bdr: #2E2925;
+            --bdr2: #3A3430;
+            --r: 12px;
+            --rs: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .layout { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sb {
+            width: 250px; background: var(--bg2); border-right: 1px solid var(--bdr);
+            display: flex; flex-direction: column; position: fixed;
+            top: 0; left: 0; bottom: 0; z-index: 100; transition: transform .3s;
+        }
+        .sb-hd { padding: 22px 18px; border-bottom: 1px solid var(--bdr); }
+        .sb-logo {
+            font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 700;
+            color: var(--accent); text-decoration: none;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sb-logo span { color: var(--fg); font-weight: 400; }
+        .sb-logo .li {
+            width: 34px; height: 34px; background: var(--accentG); border-radius: 9px;
+            display: flex; align-items: center; justify-content: center; font-size: .85rem;
+        }
+        .sb-nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 3px; }
+        .sb-lbl {
+            font-size: .68rem; font-weight: 600; color: var(--fgd);
+            text-transform: uppercase; letter-spacing: .07em; padding: 14px 12px 7px;
+        }
+        .ni {
+            display: flex; align-items: center; gap: 11px; padding: 9px 13px;
+            border-radius: var(--rs); color: var(--fgm); text-decoration: none;
+            font-size: .85rem; font-weight: 500; transition: all .2s; cursor: pointer;
+        }
+        .ni:hover { background: rgba(255,255,255,.04); color: var(--fg); }
+        .ni.active { background: var(--accentG); color: var(--accent); }
+        .ni i { width: 18px; text-align: center; font-size: .85rem; }
+        .ni .bdg {
+            margin-left: auto; background: var(--accent); color: #fff;
+            font-size: .68rem; font-weight: 700; padding: 2px 7px;
+            border-radius: 10px; min-width: 18px; text-align: center;
+        }
+        .sb-ft { padding: 14px 18px; border-top: 1px solid var(--bdr); }
+        .sb-ft a {
+            color: var(--fgd); text-decoration: none; font-size: .8rem;
+            display: flex; align-items: center; gap: 7px; transition: color .2s;
+        }
+        .sb-ft a:hover { color: var(--fg); }
+
+        .mc { flex: 1; margin-left: 250px; display: flex; flex-direction: column; }
+
+        /* Topbar */
+        .tb {
+            padding: 14px 28px; border-bottom: 1px solid var(--bdr);
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg2); position: sticky; top: 0; z-index: 50;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .tb-l h1 { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700; }
+        .tb-l p { font-size: .78rem; color: var(--fgm); margin-top: 2px; }
+        .tb-r { display: flex; align-items: center; gap: 10px; }
+        .tbtn {
+            padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: .8rem;
+            font-weight: 600; border: 1px solid var(--bdr2); border-radius: var(--rs);
+            background: var(--bg3); color: var(--fgm); cursor: pointer;
+            display: flex; align-items: center; gap: 5px; transition: all .2s;
+            text-decoration: none;
+        }
+        .tbtn:hover { border-color: var(--fgd); color: var(--fg); }
+        .tbtn.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .tbtn.pri:hover { background: var(--accentH); }
+        .rsp { animation: sp .7s linear infinite; }
+        @keyframes sp { to { transform: rotate(360deg); } }
+        .mob-btn {
+            display: none; width: 38px; height: 38px; border-radius: var(--rs);
+            border: 1px solid var(--bdr); background: var(--bg3); color: var(--fg);
+            cursor: pointer; align-items: center; justify-content: center; font-size: .95rem;
+        }
+
+        .ca { padding: 24px 28px; flex: 1; }
+
+        /* Stats */
+        .sg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+        .sc {
+            background: var(--bg3); border: 1px solid var(--bdr); border-radius: var(--r);
+            padding: 18px; position: relative; overflow: hidden; transition: all .25s;
+        }
+        .sc:hover { border-color: var(--bdr2); transform: translateY(-2px); }
+        .sc::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+        .sc:nth-child(1)::after { background: var(--accent); }
+        .sc:nth-child(2)::after { background: var(--warn); }
+        .sc:nth-child(3)::after { background: var(--ok); }
+        .sc:nth-child(4)::after { background: #7C6AEF; }
+        .si {
+            width: 38px; height: 38px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .9rem; margin-bottom: 12px;
+        }
+        .sc:nth-child(1) .si { background: var(--accentG); color: var(--accent); }
+        .sc:nth-child(2) .si { background: rgba(212,160,58,.12); color: var(--warn); }
+        .sc:nth-child(3) .si { background: rgba(61,170,109,.12); color: var(--ok); }
+        .sc:nth-child(4) .si { background: rgba(124,106,239,.12); color: #7C6AEF; }
+        .sv { font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 900; letter-spacing: -.03em; line-height: 1; margin-bottom: 3px; }
+        .sl { font-size: .78rem; color: var(--fgm); font-weight: 500; }
+
+        /* Toolbar */
+        .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+        .sbox { flex: 1; min-width: 220px; position: relative; }
+        .sbox i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--fgd); font-size: .82rem; }
+        .sbox input {
+            width: 100%; padding: 9px 12px 9px 36px; font-family: 'DM Sans', sans-serif;
+            font-size: .83rem; color: var(--fg); background: var(--bg3);
+            border: 1px solid var(--bdr); border-radius: var(--rs); outline: none; transition: all .2s;
+        }
+        .sbox input::placeholder { color: var(--fgd); }
+        .sbox input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentG); }
+        .fsel {
+            padding: 9px 34px 9px 12px; font-family: 'DM Sans', sans-serif; font-size: .83rem;
+            color: var(--fg); background: var(--bg3); border: 1px solid var(--bdr);
+            border-radius: var(--rs); outline: none; cursor: pointer; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B5E52' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center;
+        }
+        .ftog {
+            padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: .83rem;
+            font-weight: 600; color: var(--fgm); background: var(--bg3);
+            border: 1px solid var(--bdr); border-radius: var(--rs); cursor: pointer;
+            transition: all .2s; display: flex; align-items: center; gap: 5px;
+        }
+        .ftog:hover { border-color: var(--bdr2); color: var(--fg); }
+        .ftog.on { background: var(--accentG); border-color: var(--accent); color: var(--accent); }
+
+        /* Table */
+        .mt { background: var(--bg3); border: 1px solid var(--bdr); border-radius: var(--r); overflow: hidden; }
+        .th {
+            display: grid; grid-template-columns: 36px 1.5fr 1.2fr 1fr 110px 76px;
+            padding: 10px 18px; background: rgba(255,255,255,.02);
+            border-bottom: 1px solid var(--bdr); font-size: .72rem;
+            font-weight: 600; color: var(--fgd); text-transform: uppercase; letter-spacing: .06em;
+        }
+        .mr {
+            display: grid; grid-template-columns: 36px 1.5fr 1.2fr 1fr 110px 76px;
+            padding: 14px 18px; border-bottom: 1px solid var(--bdr);
+            align-items: center; transition: background .15s; cursor: pointer;
+            animation: ri .25s ease both;
+        }
+        @keyframes ri { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .mr:last-child { border-bottom: none; }
+        .mr:hover { background: rgba(255,255,255,.02); }
+        .mr.unr { background: rgba(196,101,42,.04); }
+        .mr.unr:hover { background: rgba(196,101,42,.07); }
+        .udot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(196,101,42,.4); }
+        .rdot { width: 7px; height: 7px; border-radius: 50%; background: transparent; }
+        .mn { font-weight: 600; font-size: .85rem; display: flex; align-items: center; gap: 7px; }
+        .mn .av {
+            width: 28px; height: 28px; border-radius: 7px; background: var(--accentG);
+            color: var(--accent); display: flex; align-items: center; justify-content: center;
+            font-size: .68rem; font-weight: 700; flex-shrink: 0;
+        }
+        .me { font-size: .8rem; color: var(--fgm); }
+        .ms {
+            display: inline-flex; padding: 3px 9px; border-radius: 5px;
+            font-size: .73rem; font-weight: 600;
+            background: rgba(255,255,255,.04); color: var(--fgm); border: 1px solid var(--bdr);
+        }
+        .ms[data-s="Technical Support"] { background: rgba(61,170,109,.1); color: var(--ok); border-color: rgba(61,170,109,.2); }
+        .ms[data-s="Partnership"] { background: rgba(124,106,239,.1); color: #9B8FFF; border-color: rgba(124,106,239,.2); }
+        .ms[data-s="Billing"] { background: rgba(212,160,58,.1); color: var(--warn); border-color: rgba(212,160,58,.2); }
+        .ms[data-s="Feedback"] { background: rgba(196,101,42,.1); color: var(--accent); border-color: rgba(196,101,42,.2); }
+        .mt2 { font-size: .75rem; color: var(--fgd); }
+        .ma { display: flex; gap: 5px; opacity: 0; transition: opacity .2s; }
+        .mr:hover .ma { opacity: 1; }
+        .ab {
+            width: 28px; height: 28px; border-radius: 5px; border: 1px solid var(--bdr);
+            background: var(--bg2); color: var(--fgd); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .72rem; transition: all .2s;
+        }
+        .ab:hover { border-color: var(--fgd); color: var(--fg); }
+        .ab.del:hover { border-color: var(--err); color: var(--err); background: rgba(214,69,69,.08); }
+
+        .es { padding: 70px 20px; text-align: center; }
+        .es i { font-size: 2.8rem; color: var(--fgd); margin-bottom: 14px; }
+        .es h3 { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+        .es p { font-size: .85rem; color: var(--fgm); max-width: 300px; margin: 0 auto; }
+
+        /* Modal */
+        .mo {
+            position: fixed; inset: 0; background: rgba(0,0,0,.6);
+            backdrop-filter: blur(6px); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity .25s;
+        }
+        .mo.show { opacity: 1; pointer-events: auto; }
+        .md {
+            background: var(--bg3); border: 1px solid var(--bdr2); border-radius: 14px;
+            width: 90%; max-width: 560px; max-height: 80vh; overflow-y: auto;
+            transform: scale(.95) translateY(8px);
+            transition: transform .25s cubic-bezier(.16,1,.3,1);
+        }
+        .mo.show .md { transform: scale(1) translateY(0); }
+        .md-hd { padding: 22px 22px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+        .md-cl {
+            width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--bdr);
+            background: transparent; color: var(--fgm); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .82rem; transition: all .2s; flex-shrink: 0;
+        }
+        .md-cl:hover { background: rgba(214,69,69,.08); border-color: var(--err); color: var(--err); }
+        .md-bd { padding: 18px 22px 22px; }
+        .md-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+        .mi { display: flex; flex-direction: column; gap: 2px; }
+        .mi-l { font-size: .68rem; font-weight: 600; color: var(--fgd); text-transform: uppercase; letter-spacing: .06em; }
+        .mi-v { font-size: .85rem; font-weight: 600; color: var(--fg); }
+        .md-msg {
+            padding: 18px; background: var(--bg2); border: 1px solid var(--bdr);
+            border-radius: var(--rs); font-size: .88rem; line-height: 1.7; white-space: pre-wrap;
+        }
+        .md-ft { padding: 0 22px 22px; display: flex; gap: 8px; justify-content: flex-end; }
+        .mbtn {
+            padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-size: .8rem;
+            font-weight: 600; border-radius: var(--rs); cursor: pointer;
+            transition: all .2s; display: flex; align-items: center; gap: 5px;
+        }
+        .mbtn.sec { background: var(--bg2); border: 1px solid var(--bdr); color: var(--fgm); }
+        .mbtn.sec:hover { border-color: var(--fgd); color: var(--fg); }
+        .mbtn.dan { background: rgba(214,69,69,.08); border: 1px solid rgba(214,69,69,.2); color: var(--err); }
+        .mbtn.dan:hover { background: rgba(214,69,69,.15); }
+
+        .tc2 {
+            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast2 {
+            padding: 10px 16px; border-radius: var(--rs); font-size: .82rem;
+            font-weight: 500; color: #fff; display: flex; align-items: center; gap: 7px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.3); animation: tin .25s ease;
+        }
+        .toast2.ok { background: #2D6A4F; }
+        .toast2.er { background: #9B2226; }
+        .toast2.inf { background: #3A3632; border: 1px solid #555; }
+        .toast2.out { animation: tout .2s ease forwards; }
+        @keyframes tin { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes tout { to { opacity: 0; transform: translateY(16px); } }
+
+        @media (max-width: 1100px) { .sg { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 900px) {
+            .sb { transform: translateX(-100%); }
+            .sb.open { transform: translateX(0); }
+            .mc { margin-left: 0; }
+            .mob-btn { display: flex; }
+            .th, .mr { grid-template-columns: 36px 1.5fr 1fr 76px; }
+            .me { display: none; }
+        }
+        @media (max-width: 600px) {
+            .sg { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .ca { padding: 18px 14px; }
+            .tb { padding: 12px 14px; }
+            .toolbar { flex-direction: column; }
+            .sbox { min-width: 100%; }
+            .th, .mr { grid-template-columns: 30px 1fr 76px; }
+            .ms { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mo" id="mo">
+        <div class="md" role="dialog" aria-modal="true">
+            <div class="md-hd">
+                <div>
+                    <h2 id="mN" style="font-family:'Fraunces',serif;font-size:1.25rem;font-weight:700"></h2>
+                    <p id="mT" style="font-size:.78rem;color:var(--fgm);margin-top:3px"></p>
+                </div>
+                <button class="md-cl" onclick="closeMo()" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="md-bd">
+                <div class="md-meta">
+                    <div class="mi"><span class="mi-l">Email</span><span class="mi-v" id="mE"></span></div>
+                    <div class="mi"><span class="mi-l">Subject</span><span class="mi-v" id="mS"></span></div>
+                </div>
+                <div class="md-msg" id="mM"></div>
+            </div>
+            <div class="md-ft">
+                <button class="mbtn sec" id="mR" onclick="togReadMo()"><i class="fas fa-envelope-open"></i> Mark as Read</button>
+                <button class="mbtn dan" onclick="delMo()"><i class="fas fa-trash-alt"></i> Delete</button>
+            </div>
+        </div>
+    </div>
+    <div class="tc2" id="tc"></div>
+
+    <div class="layout">
+        <aside class="sb" id="sb">
+            <div class="sb-hd">
+                <a href="index.html" class="sb-logo">
+                    <div class="li"><i class="fas fa-paper-plane"></i></div>
+                    Form<span>Flow</span>
+                </a>
+            </div>
+            <nav class="sb-nav">
+                <div class="sb-lbl">Main</div>
+                <a class="ni active"><i class="fas fa-inbox"></i> Inbox <span class="bdg" id="ubdg">0</span></a>
+                <a class="ni" onclick="filtUnr()"><i class="fas fa-envelope"></i> Unread</a>
+                <a class="ni" onclick="clearFilt()"><i class="fas fa-check-double"></i> All</a>
+                <div class="sb-lbl">Actions</div>
+                <a class="ni" onclick="markAll()"><i class="fas fa-check-circle"></i> Mark All Read</a>
+                <a class="ni" onclick="clearAll()"><i class="fas fa-trash"></i> Clear All Messages</a>
+                <a href="index.html" class="ni"><i class="fas fa-external-link-alt"></i> Go to Form</a>
+            </nav>
+            <div class="sb-ft">
+                <a href="index.html"><i class="fas fa-arrow-left"></i> Back to Form</a>
+            </div>
+        </aside>
+
+        <div class="mc">
+            <header class="tb">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <button class="mob-btn" onclick="document.getElementById('sb').classList.toggle('open')" aria-label="Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="tb-l">
+                        <h1>Message Inbox</h1>
+                        <p id="lu">Loading...</p>
+                    </div>
+                </div>
+                <div class="tb-r">
+                    <button class="tbtn" onclick="refresh()"><i class="fas fa-sync-alt" id="ri"></i> Refresh</button>
+                    <a href="index.html" class="tbtn pri"><i class="fas fa-plus"></i> New Message</a>
+                </div>
+            </header>
+
+            <div class="ca">
+                <div class="sg">
+                    <div class="sc"><div class="si"><i class="fas fa-inbox"></i></div><div class="sv" id="sT">0</div><div class="sl">Total Messages</div></div>
+                    <div class="sc"><div class="si"><i class="fas fa-envelope"></i></div><div class="sv" id="sU">0</div><div class="sl">Unread</div></div>
+                    <div class="sc"><div class="si"><i class="fas fa-calendar-day"></i></div><div class="sv" id="sD">0</div><div class="sl">Today</div></div>
+                    <div class="sc"><div class="si"><i class="fas fa-tags"></i></div><div class="sv" id="sC">0</div><div class="sl">Categories</div></div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="sbox">
+                        <i class="fas fa-search"></i>
+                        <input id="si" placeholder="Search name, email, or content..." oninput="debSearch()">
+                    </div>
+                    <select class="fsel" id="sf" onchange="render()">
+                        <option value="all">All Subjects</option>
+                        <option>General Inquiry</option>
+                        <option>Technical Support</option>
+                        <option>Partnership</option>
+                        <option>Feedback</option>
+                        <option>Billing</option>
+                        <option>Other</option>
+                    </select>
+                    <button class="ftog" id="ut" onclick="this.classList.toggle('on');render()">
+                        <i class="fas fa-circle" style="font-size:.45rem"></i> Unread Only
+                    </button>
+                </div>
+
+                <div class="mt">
+                    <div class="th">
+                        <span></span><span>Sender</span><span>Email</span><span>Subject</span><span>Time</span><span>Actions</span>
+                    </div>
+                    <div id="ml">
+                        <div class="es">
+                            <i class="fas fa-inbox"></i>
+                            <h3>No Messages Yet</h3>
+                            <p>Messages from the contact form will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var SK = 'formflow_messages';
+        var curId = null;
+        var sTimer = null;
+        var useAPI = false;
+
+        async function checkServer() {
+            try {
+                var ctrl = new AbortController();
+                var timer = setTimeout(function() { ctrl.abort(); }, 3000);
+                var r = await fetch('/api/health', { signal: ctrl.signal });
+                clearTimeout(timer);
+                if (r.ok) {
+                    useAPI = true;
+                    return true;
+                }
+            } catch(e) {}
+            useAPI = false;
+            return false;
+        }
+
+        async function init() {
+            await checkServer();
+            await render();
+            document.getElementById('lu').textContent = 'Ready' + (useAPI ? ' (Server)' : ' (Local)');
+            
+            setInterval(async function() {
+                await checkServer();
+                await render();
+                document.getElementById('lu').textContent = 'Auto-sync: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }, 3000);
+        }
+
+        init();
+
+        async function getMsgs() {
+            try {
+                var ctrl = new AbortController();
+                var timer = setTimeout(function() { ctrl.abort(); }, 5000);
+                var r = await fetch('/api/messages', { signal: ctrl.signal });
+                clearTimeout(timer);
+                if (r.ok) {
+                    var data = await r.json();
+                    useAPI = true;
+                    return data.data || [];
+                }
+            } catch(e) {}
+            try { return JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { return []; }
+        }
+        
+        async function saveMsgs(m) {
+            localStorage.setItem(SK, JSON.stringify(m));
+        }
+
+        async function togRead(id, silent) {
+            var msgs = await getMsgs();
+            var m = msgs.find(function(x) { return x.id === id; });
+            if (!m) return;
+            var newReadState = !m.read;
+            try {
+                await fetch('/api/messages/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ read: newReadState })
+                });
+            } catch(e) {}
+            m.read = newReadState;
+            render();
+            if (!silent) toast2(m.read ? 'Marked as read' : 'Marked as unread', 'inf');
+            if (curId === id) {
+                document.getElementById('mR').innerHTML = m.read
+                    ? '<i class="fas fa-envelope"></i> Mark as Unread'
+                    : '<i class="fas fa-envelope-open"></i> Mark as Read';
+            }
+        }
+
+        async function delMsg(id) {
+            try {
+                await fetch('/api/messages/' + id, { method: 'DELETE' });
+            } catch(e) {}
+            var msgs = await getMsgs();
+            msgs = msgs.filter(function(x) { return x.id !== id; });
+            render();
+            toast2('Message deleted', 'ok');
+            if (curId === id) closeMo();
+        }
+
+        async function markAll() {
+            try {
+                await fetch('/api/messages/read-all', { method: 'PATCH' });
+            } catch(e) {}
+            render();
+            toast2('All marked as read', 'ok');
+        }
+
+        async function clearAll() {
+            var msgs = await getMsgs();
+            if (msgs.length === 0) { toast2('No messages to clear', 'inf'); return; }
+            for (var i = 0; i < msgs.length; i++) {
+                try {
+                    await fetch('/api/messages/' + msgs[i].id, { method: 'DELETE' });
+                } catch(e) {}
+            }
+            render();
+            toast2('All messages cleared', 'ok');
+        }
+        function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        function relTime(ts) {
+            var d = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+            if (d < 60) return 'Just now';
+            var m = Math.floor(d / 60); if (m < 60) return m + ' min ago';
+            var h = Math.floor(m / 60); if (h < 24) return h + ' hr ago';
+            var dy = Math.floor(h / 24); if (dy < 7) return dy + ' day' + (dy > 1 ? 's' : '') + ' ago';
+            return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function fullTime(ts) {
+            return new Date(ts).toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        async function updateStats() {
+            var msgs = await getMsgs();
+            var today = new Date(); today.setHours(0, 0, 0, 0);
+            var tod = msgs.filter(function(m) { return new Date(m.timestamp) >= today; }).length;
+            var unr = msgs.filter(function(m) { return !m.read; }).length;
+            var cats = new Set(msgs.map(function(m) { return m.subject; })).size;
+            document.getElementById('sT').textContent = msgs.length;
+            document.getElementById('sU').textContent = unr;
+            document.getElementById('sD').textContent = tod;
+            document.getElementById('sC').textContent = cats;
+            var bdg = document.getElementById('ubdg');
+            bdg.textContent = unr;
+            bdg.style.display = unr > 0 ? 'inline' : 'none';
+        }
+
+        async function render() {
+            var msgs = await getMsgs();
+            var search = document.getElementById('si').value.toLowerCase();
+            var subj = document.getElementById('sf').value;
+            var unrOnly = document.getElementById('ut').classList.contains('on');
+
+            if (search) {
+                msgs = msgs.filter(function(m) {
+                    return m.name.toLowerCase().indexOf(search) !== -1 ||
+                        m.email.toLowerCase().indexOf(search) !== -1 ||
+                        m.message.toLowerCase().indexOf(search) !== -1;
+                });
+            }
+            if (subj !== 'all') {
+                msgs = msgs.filter(function(m) { return m.subject === subj; });
+            }
+            if (unrOnly) {
+                msgs = msgs.filter(function(m) { return !m.read; });
+            }
+
+            var el = document.getElementById('ml');
+            if (!msgs.length) {
+                el.innerHTML = '<div class="es"><i class="fas fa-inbox"></i><h3>No Matching Messages</h3><p>Try adjusting your filters</p></div>';
+                updateStats();
+                return;
+            }
+
+            el.innerHTML = msgs.map(function(m, i) {
+                var ini = m.name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+                return '<div class="mr ' + (m.read ? '' : 'unr') + '" style="animation-delay:' + (i * .03) + 's" onclick="openMo(\'' + m.id + '\')">' +
+                    '<div>' + (m.read ? '<div class="rdot"></div>' : '<div class="udot"></div>') + '</div>' +
+                    '<div class="mn"><div class="av">' + esc(ini) + '</div>' + esc(m.name) + '</div>' +
+                    '<div class="me">' + esc(m.email) + '</div>' +
+                    '<div><span class="ms" data-s="' + esc(m.subject) + '">' + esc(m.subject) + '</span></div>' +
+                    '<div class="mt2">' + relTime(m.timestamp) + '</div>' +
+                    '<div class="ma">' +
+                        '<button class="ab" onclick="event.stopPropagation();togRead(\'' + m.id + '\')" title="' + (m.read ? 'Mark unread' : 'Mark read') + '"><i class="fas ' + (m.read ? 'fa-envelope' : 'fa-envelope-open') + '"></i></button>' +
+                        '<button class="ab del" onclick="event.stopPropagation();delMsg(\'' + m.id + '\')" title="Delete"><i class="fas fa-trash-alt"></i></button>' +
+                    '</div></div>';
+            }).join('');
+
+            updateStats();
+        }
+
+        async function openMo(id) {
+            curId = id;
+            var msgs = await getMsgs();
+            var m = msgs.find(function(x) { return x.id === id; });
+            if (!m) return;
+            document.getElementById('mN').textContent = m.name;
+            document.getElementById('mE').textContent = m.email;
+            document.getElementById('mS').textContent = m.subject;
+            document.getElementById('mM').textContent = m.message;
+            document.getElementById('mT').textContent = fullTime(m.timestamp);
+            document.getElementById('mR').innerHTML = m.read
+                ? '<i class="fas fa-envelope"></i> Mark as Unread'
+                : '<i class="fas fa-envelope-open"></i> Mark as Read';
+            document.getElementById('mo').classList.add('show');
+            if (!m.read) togRead(id, true);
+        }
+
+        function closeMo() {
+            document.getElementById('mo').classList.remove('show');
+            curId = null;
+        }
+
+        document.getElementById('mo').addEventListener('click', function(e) {
+            if (e.target === e.currentTarget) closeMo();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeMo();
+        });
+
+        function togReadMo() { if (curId) togRead(curId); }
+        function delMo() { if (curId) delMsg(curId); }
+
+        async function filtUnr() {
+            document.getElementById('ut').classList.add('on');
+            await render();
+            document.getElementById('sb').classList.remove('open');
+        }
+
+        async function clearFilt() {
+            document.getElementById('ut').classList.remove('on');
+            document.getElementById('sf').value = 'all';
+            document.getElementById('si').value = '';
+            await render();
+            document.getElementById('sb').classList.remove('open');
+        }
+
+        function debSearch() {
+            clearTimeout(sTimer);
+            sTimer = setTimeout(render, 250);
+        }
+
+        async function refresh() {
+            var ic = document.getElementById('ri');
+            ic.classList.add('rsp');
+            await render();
+            setTimeout(function() { ic.classList.remove('rsp'); }, 600);
+            document.getElementById('lu').textContent = 'Updated: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            toast2('Refreshed', 'inf');
+        }
+
+        function toast2(msg, type) {
+            var t = document.createElement('div');
+            t.className = 'toast2 ' + type;
+            var ic = { ok: 'fa-check-circle', er: 'fa-times-circle', inf: 'fa-info-circle' };
+            t.innerHTML = '<i class="fas ' + (ic[type] || ic.inf) + '"></i> ' + msg;
+            document.getElementById('tc').appendChild(t);
+            setTimeout(function() {
+                t.classList.add('out');
+                setTimeout(function() { t.remove(); }, 200);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
