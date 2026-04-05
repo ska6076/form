@@ -427,22 +427,33 @@
             useAPI = false;
             return false;
         }
-        
-        checkServer();
+
+        async function init() {
+            await checkServer();
+            await render();
+            document.getElementById('lu').textContent = 'Ready' + (useAPI ? ' (Server)' : ' (Local)');
+            
+            setInterval(async function() {
+                await checkServer();
+                await render();
+                document.getElementById('lu').textContent = 'Auto-sync: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }, 3000);
+        }
+
+        init();
 
         async function getMsgs() {
-            if (useAPI) {
-                try {
-                    var ctrl = new AbortController();
-                    var timer = setTimeout(function() { ctrl.abort(); }, 5000);
-                    var r = await fetch('/api/messages', { signal: ctrl.signal });
-                    clearTimeout(timer);
-                    if (r.ok) {
-                        var data = await r.json();
-                        return data.data || [];
-                    }
-                } catch(e) {}
-            }
+            try {
+                var ctrl = new AbortController();
+                var timer = setTimeout(function() { ctrl.abort(); }, 5000);
+                var r = await fetch('/api/messages', { signal: ctrl.signal });
+                clearTimeout(timer);
+                if (r.ok) {
+                    var data = await r.json();
+                    useAPI = true;
+                    return data.data || [];
+                }
+            } catch(e) {}
             try { return JSON.parse(localStorage.getItem(SK)) || []; } catch(e) { return []; }
         }
         
@@ -451,15 +462,13 @@
         }
 
         async function togRead(id, silent) {
-            if (useAPI) {
-                try {
-                    await fetch('/api/messages/' + id, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ read: true })
-                    });
-                } catch(e) {}
-            }
+            try {
+                await fetch('/api/messages/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ read: true })
+                });
+            } catch(e) {}
             var msgs = await getMsgs();
             var m = msgs.find(function(x) { return x.id === id; });
             if (!m) return;
@@ -475,11 +484,9 @@
         }
 
         async function delMsg(id) {
-            if (useAPI) {
-                try {
-                    await fetch('/api/messages/' + id, { method: 'DELETE' });
-                } catch(e) {}
-            }
+            try {
+                await fetch('/api/messages/' + id, { method: 'DELETE' });
+            } catch(e) {}
             var msgs = await getMsgs();
             msgs = msgs.filter(function(x) { return x.id !== id; });
             saveMsgs(msgs);
@@ -489,11 +496,9 @@
         }
 
         async function markAll() {
-            if (useAPI) {
-                try {
-                    await fetch('/api/messages/read-all', { method: 'PATCH' });
-                } catch(e) {}
-            }
+            try {
+                await fetch('/api/messages/read-all', { method: 'PATCH' });
+            } catch(e) {}
             var msgs = await getMsgs();
             msgs.forEach(function(m) { m.read = true; });
             saveMsgs(msgs);
@@ -504,12 +509,13 @@
         async function clearAll() {
             var msgs = await getMsgs();
             if (msgs.length === 0) { toast2('No messages to clear', 'inf'); return; }
-            if (useAPI) {
-                for (var i = 0; i < msgs.length; i++) {
-                    try {
-                        await fetch('/api/messages/' + msgs[i].id, { method: 'DELETE' });
-                    } catch(e) {}
-                }
+            for (var i = 0; i < msgs.length; i++) {
+                try {
+                    await fetch('/api/messages/' + msgs[i].id, { method: 'DELETE' });
+                } catch(e) {}
+            try {
+                    await fetch('/api/messages/' + msgs[i].id, { method: 'DELETE' });
+                } catch(e) {}
             }
             saveMsgs([]);
             render();
@@ -651,14 +657,6 @@
             document.getElementById('lu').textContent = 'Updated: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             toast2('Refreshed', 'inf');
         }
-
-        setInterval(async function() {
-            await render();
-            document.getElementById('lu').textContent = 'Auto-sync: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }, 3000);
-
-        await render();
-        document.getElementById('lu').textContent = 'Ready';
 
         function toast2(msg, type) {
             var t = document.createElement('div');
